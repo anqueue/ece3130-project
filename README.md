@@ -1,0 +1,1 @@
+Follow https://www.youtube.com/watch?v=CDqQXCO6F4A for getting it running on MacOS
