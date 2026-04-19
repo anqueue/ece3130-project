@@ -113,9 +113,6 @@ int main(void)
  
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
     float measured_volts = 3.3f*(raw / 4095.0f);
-    // V_out = (1000 / (R + 1000)) * 3.3
-    // Voltage divider
-    // 3.3
 
     float ActiveR = ((3.3 * KnownR)/(measured_volts))-KnownR;
     
