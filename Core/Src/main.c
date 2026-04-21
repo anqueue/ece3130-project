@@ -20,6 +20,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "stm32l476xx.h"
+#include "stm32l4xx_hal.h"
+#include "stm32l4xx_hal_gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -57,6 +60,18 @@ static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
 /* USER CODE BEGIN PFP */
 
+// * LCD FUNCTIONS
+void Write_String_LCD(char*);
+void Write_Char_LCD(uint8_t);
+void Write_Instr_LCD(uint8_t);
+void LCD_nibble_write(uint8_t, uint8_t);
+void Write_SR_LCD(uint8_t);
+void LCD_Init(void);
+
+// * 7-SEGMENT FUNCTIONS
+void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit);
+void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -74,6 +89,10 @@ int main(void)
   /* USER CODE BEGIN 1 */
   uint16_t raw;
   char msg[48];
+  int demoStatus = 0; // set to 0 to indicate game is not active
+  char* welcome = "Press SW2 to Start.";
+  GPIO_PinState state;
+
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -82,7 +101,6 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
-
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -97,11 +115,26 @@ int main(void)
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  LCD_Init();
+
+  Write_String_LCD(welcome); //write to LCD
+
+  for (int i=1;i<5;i++){ //test all 7 segment displays
+    Write_7Seg(i, i);
+  }
+
+  state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13); 
+  if (state == GPIO_PIN_SET){ //SW2, connected to PB11 is pressed
+    demoStatus = 1;
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  while (demoStatus==1){
+    // * TEMP PLACEMENT FOR THE GAME LOOP
+  }
   while (1)
   {
     int KnownR = 980; // 1kOhm
@@ -261,7 +294,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 4800;
+  huart2.Init.BaudRate = 115200;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -299,10 +332,13 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, LD2_Pin|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|LD2_Pin|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -310,19 +346,32 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : LD2_Pin PA9 PA10 */
-  GPIO_InitStruct.Pin = LD2_Pin|GPIO_PIN_9|GPIO_PIN_10;
+  /*Configure GPIO pins : PA1 LD2_Pin PA9 PA10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|LD2_Pin|GPIO_PIN_9|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PC9 */
-  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  /*Configure GPIO pins : PB10 PB11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10|GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PC9 PC10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB5 */
+  GPIO_InitStruct.Pin = GPIO_PIN_5;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -330,6 +379,137 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void LCD_Init()
+	{
+        /* LCD controller reset sequence */ 
+        HAL_Delay(20);
+        LCD_nibble_write(0x30,0); 
+        HAL_Delay(5);
+        LCD_nibble_write(0x30,0); 
+        HAL_Delay(1);
+        LCD_nibble_write(0x30,0);
+        HAL_Delay(1);
+        LCD_nibble_write(0x20,0); 
+        HAL_Delay(1);
+
+        Write_Instr_LCD(0x28); /* set 4 bit data LCD - two line display - 5x8 font*/ 
+        Write_Instr_LCD(0x0E); /* turn on display, turn on cursor , turn off blinking */ 
+        Write_Instr_LCD(0x01); /* clear display screen and return to home position*/ 
+        Write_Instr_LCD(0x06); /* move cursor to right (entry mode set instruction)*/
+}
+
+void LCD_nibble_write(uint8_t temp, uint8_t s){
+  /*writing instruction*/ 
+  if (s==0){ 
+    temp=temp&0xF0;
+    temp=temp|0x02; /*RS (bit 0) = 0 for Command EN (bit1)=high */ 
+    Write_SR_LCD(temp);
+
+      temp=temp&0xFD; /*RS (bit 0) = 0 for Command EN (bit1) = low*/ 
+      Write_SR_LCD(temp);	}
+
+  /*writing data*/ 
+    else if (s==1) {
+    temp=temp&0xF0;
+    temp=temp|0x03;	/*RS(bit 0)=1 for data EN (bit1) = high*/ 
+    Write_SR_LCD(temp);
+
+    temp=temp&0xFD; /*RS(bit 0)=1 for data EN(bit1) = low*/ 
+    Write_SR_LCD(temp); 
+    }
+}
+
+void Write_String_LCD(char *temp) 
+{ 
+    int i=0;
+
+    while(temp[i]!=0)
+        {
+            Write_Char_LCD(temp[i]); i=i+1;
+        }
+}
+
+void Write_Instr_LCD(uint8_t code)
+{
+  LCD_nibble_write(code&0xF0,0);
+
+  code=code<<4; LCD_nibble_write(code,0);
+}
+
+
+void Write_Char_LCD(uint8_t code)
+{
+    LCD_nibble_write(code&0xF0,1);
+    code=code<<4;
+    LCD_nibble_write(code,1);
+}
+
+void Write_SR_LCD(uint8_t temp)
+{
+int i;
+uint8_t mask=0b10000000;
+	
+for(i=0; i<8; i++) {
+        if((temp&mask)==0)
+          HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+        else
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5,  GPIO_PIN_SET);
+
+        /*	Sclck */
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+        HAL_Delay(1);
+
+        mask=mask>>1;
+        }
+
+    /*Latch*/
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+}
+
+void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit){
+  int i;
+  uint8_t mask=0b10000000;
+  for(i=0; i<8; i++) {
+    if((temp_Digit&mask)==0) {
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+    } else {
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+    }
+    /* Sclck */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+    HAL_Delay(1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+    HAL_Delay(1);
+    mask=(mask>>1);
+  }
+
+  mask=0b10000000;
+
+  for(i=0; i<8; i++){
+    if((temp_Enable&mask)==0)
+      HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
+    else
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+    /* Sclck */
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+    HAL_Delay(1);
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+    HAL_Delay(1);
+    mask=mask>>1;
+  }
+
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
+}
+
+void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit){
+  uint8_t Enable[5]= {0x00, 0x08, 0x04, 0x02, 0x01};
+  uint8_t Digit[10]= {0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xF8, 0x80, 0x90};
+  Write_SR_7S(Enable[temp_Enable], Digit[temp_Digit]);
+}
+
 
 /* USER CODE END 4 */
 
