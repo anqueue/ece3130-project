@@ -17,6 +17,7 @@
   */
 #include <stdio.h>
 #include <string.h>
+#include "util.h"
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -101,6 +102,7 @@ int main(void)
   HAL_Init();
 
   /* USER CODE BEGIN Init */
+
   /* USER CODE END Init */
 
   /* Configure the system clock */
@@ -116,17 +118,23 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
-
+  Write_Instr_LCD(0x01);
   Write_String_LCD(welcome); //write to LCD
 
   for (int i=1;i<5;i++){ //test all 7 segment displays
     Write_7Seg(i, i);
   }
+// while (demoStatus == 0){
+while (1) {
 
-  state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_13); 
+  state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11); 
   if (state == GPIO_PIN_SET){ //SW2, connected to PB11 is pressed
-    demoStatus = 1;
+    test();
+    // demoStatus = 1;
+    // break;
   }
+}
+// }
 
   /* USER CODE END 2 */
 
@@ -134,8 +142,11 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (demoStatus==1){
     // * TEMP PLACEMENT FOR THE GAME LOOP
+  Write_Instr_LCD(0x01);
+
+
   }
-  while (1)
+  while (0)
   {
     int KnownR = 980; // 1kOhm
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
