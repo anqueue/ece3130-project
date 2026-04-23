@@ -1,4 +1,12 @@
 #include "util.h"
+#include "stm32l476xx.h"
+#include "stm32l4xx_hal_adc.h"
+#include "stm32l4xx_hal_gpio.h"
+
+uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
+uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
+
+volatile enum GameState GAME_STATE = GAME_WELCOME;
 
 void test() {
   for (int i = 0; i < 440; i++) {
@@ -7,6 +15,80 @@ void test() {
     HAL_Delay(1);
     HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
     HAL_Delay(1);
+  }
+}
+
+void g_PrintWelcome() {
+  char *WELCOME_l1 = " Resistor Game";
+  char *WELCOME_l2 = " Press to start ";
+
+  h_ClearLCD();
+  h_SetLine(0);
+  Write_String_LCD(WELCOME_l1);
+  h_SetLine(1);
+  Write_String_LCD(WELCOME_l2);
+  h_SetLine(0);
+}
+
+void h_ClearLCD() { Write_Instr_LCD(0x01); }
+
+void h_SetLine(uint8_t line) {
+  if (LCD_CURRENT_LINE == 0) {
+    LCD_CURRENT_LINE = 1;
+    Write_Instr_LCD(0x80);
+  } else {
+    LCD_CURRENT_LINE = 0;
+    Write_Instr_LCD(0xC0);
+  }
+}
+
+void h_SetCursor(uint8_t new) {
+  if (new == 0) {
+    LCD_CURSOR_VISIBILITY = 0;
+    Write_Instr_LCD(0x0C);
+  } else {
+    LCD_CURSOR_VISIBILITY = 1;
+    Write_Instr_LCD(0x0E);
+  }
+}
+
+uint16_t h_GetResistance(ADC_HandleTypeDef *hadc) {
+  /*
+  int KnownR = 980; // 1kOhm
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    raw = HAL_ADC_GetValue(&hadc1);
+
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+    float measured_volts = 3.3f * (raw / 4095.0f);
+
+    float ActiveR = ((3.3 * KnownR) / (measured_volts)) - KnownR;
+
+    int r1000 = ActiveR * 1000;
+    int v1000 = measured_volts * 1000;
+    sprintf(msg, ">R:%d\r\n>V:%d.%03d\r\n", r1000 / 1000, v1000 / 1000,
+            v1000 % 1000);
+    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
+
+    HAL_Delay(100);
+  */
+
+  HAL_ADC_Start(hadc);
+  HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
+  uint16_t raw = HAL_ADC_GetValue(hadc);
+  float measured_volts = 3.3f * (raw / 4095.0f);
+  float ActiveR = ((3.3 * 980) / (measured_volts)) - 980;
+
+  return (uint16_t)ActiveR;
+}
+
+bool h_IsPressedSW2() {
+  if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11) == GPIO_PIN_SET) {
+    return true;
+  } else {
+    return false;
   }
 }
 
