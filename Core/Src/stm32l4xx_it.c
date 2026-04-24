@@ -1,4 +1,5 @@
 /* USER CODE BEGIN Header */
+// clang-format off
 /**
   ******************************************************************************
   * @file    stm32l4xx_it.c
@@ -19,6 +20,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "util.h"
 #include "stm32l4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -187,7 +189,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-
+  user_SysTick_Handler();
   /* USER CODE END SysTick_IRQn 1 */
 }
 

@@ -15,10 +15,13 @@
  *
  ******************************************************************************
  */
+#include "stm32l4xx_hal.h"
 #include "util.h"
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* USER CODE END Header */
@@ -99,7 +102,10 @@ int main(void) {
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
+  srand(HAL_GetTick());
   LCD_Init();
+  h_SetCursor(0);       // turn of cursor
+  h_Time7Segment(5000); // No counting, just show 5s to prep for next part
   g_PrintWelcome();
   /* USER CODE END 2 */
 
@@ -108,21 +114,40 @@ int main(void) {
   // Currently we can guarentee that game state is on the welcome page.
   // We want to wait until any key is pressed to start the game
 
-  bool pressed = h_IsPressedSW2();
-  while (pressed == false) {
-    // Do nothing, just wait...
-    pressed = h_IsPressedSW2();
-    if (false) {
-    };
+  while (!h_IsPressedSW2()) {
+    // Do nothing, just wait
+    // We can go ahead and print the timer while we wait though
+    h_Time7Segment(5000); // No counting, just show 5s to prep for next part
   }
 
+  // Get ready, Start the 5s countdown
+  // The systick handler will check state and decrement for us, then transition
+  // the state to GAME_RUNNING
+  g_GetReady();
+  TIME_LEFT_MS = 5000;
+  HAL_Delay(10); // 10ms delay for the time left to sync with systick?
+  GAME_STATE = GAME_GET_READY;
+  while (GAME_STATE == GAME_GET_READY) {
+    // Wait
+  }
+  size_t target_index = rand() % 5; // Random index from 0 to 4
+  char line1_buffer[16];
+  snprintf(line1_buffer, sizeof(line1_buffer), "Find: %s",
+           RESISTOR_STRINGS[target_index]);
+  h_SetLine(0);
+  Write_String_LCD(line1_buffer);
+  h_WriteOhmSymbol();
+  TIME_LEFT_MS = 10000; // 10s to find the resistor
   GAME_STATE = GAME_RUNNING;
 
+  h_HomeCursor();
+  h_SetLine(1);
   while (1) {
+    h_HomeCursor();
+    h_SetLine(1);
     uint16_t resistance = h_GetResistance(&hadc1);
     char buffer[16];
     snprintf(buffer, sizeof(buffer), "%u ", resistance);
-    h_ClearLCD();
     Write_String_LCD(buffer);
     h_WriteOhmSymbol();
     HAL_Delay(1000); // Update every second

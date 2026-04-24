@@ -9,10 +9,11 @@ uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
 uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
 
 uint16_t RESISTORS[5] = {100, 220, 470, 1000, 2200};
-char *RESISTOR_STRINGS[5] = {"100 Ω", "220 Ω", "470 Ω", "1 kΩ", "2.2 kΩ"};
+char *RESISTOR_STRINGS[5] = {"100", "220", "470", "1k", "2.2k"};
 
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
+volatile uint16_t TIME_LEFT_MS = 0;
 
 void test() {
   for (int i = 0; i < 440; i++) {
@@ -36,6 +37,18 @@ void g_PrintWelcome() {
   h_SetLine(0);
 }
 
+void g_GetReady() {
+  char *GET_READY_l1 = "   Get Ready!   ";
+  char *GET_READY_l2 = "                ";
+
+  h_ClearLCD();
+  h_SetLine(0);
+  Write_String_LCD(GET_READY_l1);
+  h_SetLine(1);
+  Write_String_LCD(GET_READY_l2);
+  h_SetLine(0);
+}
+
 void h_ClearLCD() { Write_Instr_LCD(0x01); }
 
 void h_SetLine(uint8_t line) {
@@ -47,6 +60,8 @@ void h_SetLine(uint8_t line) {
     Write_Instr_LCD(0xC0);
   }
 }
+
+void h_HomeCursor() { Write_Instr_LCD(0x02); }
 
 void h_SetCursor(uint8_t new) {
   if (new == 0) {
@@ -154,6 +169,72 @@ void LCD_Init() {
   h_LoadOhmSymbol();
 }
 
+/*
+  Instead of putting the code inside of the stm32l4xx_it.c SysTick_Handler,
+  we made this function to be called from there that way its easy to get back to
+
+  The default SysTick time is 1ms, which is perfect because we don't need any
+  more or less precision for the game timer
+*/
+void user_SysTick_Handler() {
+  // Check if we are in the middle of a game
+  if (GAME_STATE == GAME_GET_READY) {
+    // If so, decrement the time by 1ms
+    if (TIME_LEFT_MS > 0) {
+      TIME_LEFT_MS--;
+    } else {
+      // Countdown finished, start the game
+      GAME_STATE = GAME_RUNNING;
+    }
+  } else {
+    if (GAME_STATE == GAME_RUNNING) {
+      // If so, decrement the time by 1ms
+      if (TIME_LEFT_MS > 0) {
+        TIME_LEFT_MS--;
+      } else {
+        // Times up! End the game
+        // GAME_STATE = GAME_OVER;
+      }
+    }
+  }
+
+  h_7S_Scheduled();
+}
+
+void h_Time7Segment(uint16_t time) {
+  uint8_t tens = (time / 1000) % 10;
+  uint8_t ones = (time / 100) % 10;
+  uint8_t tenths = (time / 10) % 10;
+  uint8_t hundredths = time % 10;
+
+  Write_7Seg(1, tens);
+  Write_7Seg(2, ones);
+  Write_7Seg(3, tenths);
+  Write_7Seg(4, hundredths);
+}
+
+void h_Time7SegmentDigit(uint16_t time, uint8_t digit) {
+  uint8_t tens = (time / 1000) % 10;
+  uint8_t ones = (time / 100) % 10;
+  uint8_t tenths = (time / 10) % 10;
+  uint8_t hundredths = time % 10;
+
+  switch (digit) {
+  case 1:
+    Write_7Seg(1, tens);
+    break;
+  case 2:
+    Write_7Seg(2, ones);
+    break;
+  case 3:
+    Write_7Seg(3, tenths);
+    break;
+  case 4:
+    Write_7Seg(4, hundredths);
+    break;
+  }
+}
+
 void h_LoadOhmSymbol(void) {
   // Run Set CGRAM Address command
   Write_Instr_LCD(0b01000000);
@@ -165,9 +246,9 @@ void h_LoadOhmSymbol(void) {
       0b01110, //  XXX
       0b10001, // X   X
       0b10001, // X   X
-      0b10001, // X   X bottom arc
-      0b01010, //  X X  legs
-      0b11011, // XX XX feet
+      0b10001, // X   X
+      0b01010, //  X X
+      0b11011, // XX XX
       0b00000, // _____
   };
 
@@ -183,6 +264,20 @@ void h_LoadOhmSymbol(void) {
 void h_WriteOhmSymbol(void) {
   // Write custom character 0 (the Ohm symbol) to current cursor position
   Write_Char_LCD(0);
+}
+
+void h_7S_Scheduled() {
+  // Prints only ONE 7S digit, helps with scheduling the 7S and LCD and game
+  // logic without blocking
+
+  // we use a static variable to keep track
+  // https://www.geeksforgeeks.org/cpp/static-keyword-cpp/
+  static uint8_t currentDigit = 0;
+  h_Time7SegmentDigit(TIME_LEFT_MS, currentDigit);
+  currentDigit++;
+  if (currentDigit > 4) {
+    currentDigit = 1;
+  }
 }
 
 void LCD_nibble_write(uint8_t temp, uint8_t s) {

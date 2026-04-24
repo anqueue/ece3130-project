@@ -7,14 +7,24 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+/*
+    Welcome State: only for the first welcome screen
+    Get Ready State: we pick a random resistor and then start a 3s countdown timer...
+    -> after the 3s is up, we display the target resistor and switch to the Running state
+    Running State: the user must find the resistor within time limit, we constantly check the measured resistance
+    and if its within a margin, we go to postround, otherwise, they lose and go back to the welcome screen
+
+*/
 enum GameState {
-    GAME_WELCOME = 0,
+    GAME_WELCOME,
+    GAME_GET_READY,
     GAME_RUNNING,
-    GAME_OVER
+    GAME_POST_ROUND
 };
 
 extern volatile enum GameState GAME_STATE;
 extern volatile uint8_t POINTS;
+extern volatile uint16_t TIME_LEFT_MS;
 extern char* RESISTOR_STRINGS[5];
 extern uint16_t RESISTORS[5];
 
@@ -22,11 +32,20 @@ void test();
 
 // Game functions
 void g_PrintWelcome();
+void g_GetReady();
+
+void user_SysTick_Handler();
 
 // Helper functions
 
 // Clear the LCD
 void h_ClearLCD();
+
+// Homes the cursor to top left
+void h_HomeCursor();
+
+void h_7S_Scheduled();
+void h_Time7SegmentDigit(uint16_t time, uint8_t digit);
 
 // Set the LCD line to 0 or 1
 void h_SetLine(uint8_t);
@@ -36,6 +55,8 @@ void h_SetCursor(uint8_t);
 
 // Get the current resistance
 uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1);
+
+void h_Time7Segment(uint16_t time);
 
 bool h_IsPressedSW2();
 
