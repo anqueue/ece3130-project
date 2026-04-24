@@ -114,27 +114,31 @@ int main(void) {
   // Currently we can guarentee that game state is on the welcome page.
   // We want to wait until any key is pressed to start the game
 
+  TIME_LEFT_MS = 5000;
   while (!h_IsPressedSW2()) {
-    // Do nothing, just wait
-    // We can go ahead and print the timer while we wait though
-    h_Time7Segment(5000); // No counting, just show 5s to prep for next part
+    // Wait for the initial Press SW2 to start
+    h_7S_Scheduled();
   }
 
   // Get ready, Start the 5s countdown
   // The systick handler will check state and decrement for us, then transition
   // the state to GAME_RUNNING
-  g_GetReady();
-  TIME_LEFT_MS = 5000;
-  HAL_Delay(10); // 10ms delay for the time left to sync with systick?
+  g_GetReady(); // Print the Get Ready screen
   GAME_STATE = GAME_GET_READY;
   while (GAME_STATE == GAME_GET_READY) {
-    // Wait
+    // Wait for countdown to finish- systick will change state for us
+    // in the meanatime, lets print the 7s
+    h_7S_Scheduled();
   }
+
+  // Pick a random resistor
   size_t target_index = rand() % 5; // Random index from 0 to 4
+
   char line1_buffer[16];
+  h_SetLine(0);
   snprintf(line1_buffer, sizeof(line1_buffer), "Find: %s",
            RESISTOR_STRINGS[target_index]);
-  h_SetLine(0);
+
   Write_String_LCD(line1_buffer);
   h_WriteOhmSymbol();
   TIME_LEFT_MS = 10000; // 10s to find the resistor

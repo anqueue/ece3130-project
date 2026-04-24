@@ -197,8 +197,6 @@ void user_SysTick_Handler() {
       }
     }
   }
-
-  h_7S_Scheduled();
 }
 
 void h_Time7Segment(uint16_t time) {
@@ -353,9 +351,9 @@ void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit) {
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
     }
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-    HAL_Delay(1);
+    // HAL_Delay(1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-    HAL_Delay(1);
+    // HAL_Delay(1);
     mask = (mask >> 1);
   }
 
@@ -367,9 +365,9 @@ void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit) {
     else
       HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
-    HAL_Delay(1);
+    // HAL_Delay(1);
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-    HAL_Delay(1);
+    // HAL_Delay(1);
     mask = mask >> 1;
   }
 
