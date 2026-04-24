@@ -104,8 +104,8 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   srand(HAL_GetTick());
   LCD_Init();
-  h_SetCursor(0);       // turn of cursor
-  h_Time7Segment(5000); // No counting, just show 5s to prep for next part
+  h_SetCursor(0); // turn of cursor
+
   g_PrintWelcome();
   /* USER CODE END 2 */
 
@@ -120,6 +120,13 @@ int main(void) {
     h_7S_Scheduled();
   }
 
+  // We base the seed off of the current tick, which is a little random
+  uint32_t seed = HAL_GetTick();
+  // but then we XOR it with whatever we read from the ADC, which has random
+  // noise
+  seed ^= h_GetRandomishValue(&hadc1);
+  srand(seed);
+
   // Get ready, Start the 5s countdown
   // The systick handler will check state and decrement for us, then transition
   // the state to GAME_RUNNING
@@ -130,6 +137,8 @@ int main(void) {
     // in the meanatime, lets print the 7s
     h_7S_Scheduled();
   }
+
+  h_ClearLCD();
 
   // Pick a random resistor
   size_t target_index = rand() % 5; // Random index from 0 to 4

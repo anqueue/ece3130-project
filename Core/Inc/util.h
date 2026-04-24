@@ -55,6 +55,7 @@ void h_SetCursor(uint8_t);
 
 // Get the current resistance
 uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1);
+uint16_t h_GetRandomishValue(ADC_HandleTypeDef *hadc1);
 
 void h_Time7Segment(uint16_t time);
 
@@ -68,7 +69,7 @@ void LCD_nibble_write(uint8_t, uint8_t);
 void Write_SR_LCD(uint8_t);
 void LCD_Init(void);
 void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit);
-void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit);
+void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit, bool decimal);
 
 // Load custom Ohm symbol into CGRAM at position 0
 void h_LoadOhmSymbol(void);

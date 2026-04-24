@@ -52,7 +52,7 @@ void g_GetReady() {
 void h_ClearLCD() { Write_Instr_LCD(0x01); }
 
 void h_SetLine(uint8_t line) {
-  if (LCD_CURRENT_LINE == 0) {
+  if (LCD_CURRENT_LINE == line) {
     LCD_CURRENT_LINE = 1;
     Write_Instr_LCD(0x80);
   } else {
@@ -140,6 +140,14 @@ uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
   return (uint16_t)R_unknown;
 }
 
+uint16_t h_GetRandomishValue(ADC_HandleTypeDef *hadc1) {
+  HAL_ADC_Start(hadc1);
+  HAL_ADC_PollForConversion(hadc1, HAL_MAX_DELAY);
+  uint16_t random = HAL_ADC_GetValue(hadc1);
+  HAL_ADC_Stop(hadc1);
+  return random;
+}
+
 bool h_IsPressedSW2() {
   if (HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_11) == GPIO_PIN_SET) {
     return true;
@@ -205,10 +213,10 @@ void h_Time7Segment(uint16_t time) {
   uint8_t tenths = (time / 10) % 10;
   uint8_t hundredths = time % 10;
 
-  Write_7Seg(1, tens);
-  Write_7Seg(2, ones);
-  Write_7Seg(3, tenths);
-  Write_7Seg(4, hundredths);
+  Write_7Seg(1, tens, true);
+  Write_7Seg(2, ones, false);
+  Write_7Seg(3, tenths, false);
+  Write_7Seg(4, hundredths, false);
 }
 
 void h_Time7SegmentDigit(uint16_t time, uint8_t digit) {
@@ -219,16 +227,16 @@ void h_Time7SegmentDigit(uint16_t time, uint8_t digit) {
 
   switch (digit) {
   case 1:
-    Write_7Seg(1, tens);
+    Write_7Seg(1, tens, true);
     break;
   case 2:
-    Write_7Seg(2, ones);
+    Write_7Seg(2, ones, false);
     break;
   case 3:
-    Write_7Seg(3, tenths);
+    Write_7Seg(3, tenths, false);
     break;
   case 4:
-    Write_7Seg(4, hundredths);
+    Write_7Seg(4, hundredths, false);
     break;
   }
 }
@@ -375,9 +383,16 @@ void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit) {
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_10, GPIO_PIN_RESET);
 }
 
-void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit) {
+void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit, bool decimal) {
   uint8_t Enable[5] = {0x00, 0x08, 0x04, 0x02, 0x01};
   uint8_t Digit[10] = {0xC0, 0xF9, 0xA4, 0xB0, 0x99,
                        0x92, 0x82, 0xF8, 0x80, 0x90};
+  if (decimal) {
+    // its active low, we need to clear the MSB bit to turn on the decimal point
+    Digit[temp_Digit] = Digit[temp_Digit] & 0b01111111;
+  } else {
+    // make sure the decimal point is off
+    Digit[temp_Digit] = Digit[temp_Digit] | 0b10000000;
+  }
   Write_SR_7S(Enable[temp_Enable], Digit[temp_Digit]);
 }
