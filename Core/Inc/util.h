@@ -2,6 +2,7 @@
 #define UTIL_H
 
 #include "stm32l4xx_hal.h"
+#include "stm32l4xx_hal_adc.h"
 #include "stm32l4xx_hal_gpio.h"
 #include <stdint.h>
 #include <stdbool.h>
@@ -13,6 +14,7 @@ enum GameState {
 };
 
 extern volatile enum GameState GAME_STATE;
+extern volatile uint8_t POINTS;
 
 void test();
 
@@ -31,7 +33,7 @@ void h_SetLine(uint8_t);
 void h_SetCursor(uint8_t);
 
 // Get the current resistance
-uint16_t h_GetResistance(ADC_HandleTypeDef* hadc);
+uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1);
 
 bool h_IsPressedSW2();
 

@@ -17,15 +17,13 @@
  */
 #include "util.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32l476xx.h"
-#include "stm32l4xx_hal.h"
-#include "stm32l4xx_hal_gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,6 +47,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
+ADC_HandleTypeDef hadc2;
 
 UART_HandleTypeDef huart2;
 
@@ -61,6 +60,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_ADC1_Init(void);
+/* USER CODE BEGIN PFP */
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -118,6 +119,12 @@ int main(void) {
   GAME_STATE = GAME_RUNNING;
 
   while (1) {
+    uint16_t resistance = h_GetResistance(&hadc1);
+    char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%u Ohms", resistance);
+    h_ClearLCD();
+    Write_String_LCD(buffer);
+    HAL_Delay(1000); // Update every second
   }
   /* USER CODE END WHILE */
 

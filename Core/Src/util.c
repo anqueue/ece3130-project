@@ -1,12 +1,17 @@
 #include "util.h"
 #include "stm32l476xx.h"
+#include "stm32l4xx_hal.h"
 #include "stm32l4xx_hal_adc.h"
 #include "stm32l4xx_hal_gpio.h"
+#include <stdint.h>
 
 uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
 uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
 
+uint16_t RESISTORS = {};
+
 volatile enum GameState GAME_STATE = GAME_WELCOME;
+volatile uint8_t POINTS = 0;
 
 void test() {
   for (int i = 0; i < 440; i++) {
@@ -52,36 +57,71 @@ void h_SetCursor(uint8_t new) {
   }
 }
 
-uint16_t h_GetResistance(ADC_HandleTypeDef *hadc) {
-  /*
-  int KnownR = 980; // 1kOhm
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
+  int samples = 10;
+  uint32_t sum_adc = 0;
+  uint32_t sum_ref = 0;
+  ADC_ChannelConfTypeDef sConfig = {0}; // empty config struct
 
-    HAL_ADC_Start(&hadc1);
-    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
-    raw = HAL_ADC_GetValue(&hadc1);
+  // https://controllerstech.com/stm32-adc-5-multiple-channels-without-dma/
+  sConfig.Rank =
+      ADC_REGULAR_RANK_1; // Not sure what rank does but controllerstech sets it
+                          // to 1 so we will too
+  sConfig.SamplingTime =
+      ADC_SAMPLETIME_2CYCLES_5; // shortest sampling time since we average it
+                                // ourselves
+  sConfig.SingleDiff = ADC_SINGLE_ENDED; // single ended mode - not differential
+  sConfig.OffsetNumber =
+      ADC_OFFSET_NONE; // offset not needed since ADC resolution is unchanged
+  sConfig.Offset = 0;
 
-    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-    float measured_volts = 3.3f * (raw / 4095.0f);
+  // Average multiple samples to reduce noise
+  sConfig.Channel = ADC_CHANNEL_5; // PA0 (v_adc) is IN5
+  HAL_ADC_ConfigChannel(hadc1, &sConfig);
+  for (int i = 0; i < samples; i++) {
+    HAL_ADC_Start(hadc1);
+    HAL_ADC_PollForConversion(hadc1, HAL_MAX_DELAY);
+    sum_adc += HAL_ADC_GetValue(hadc1);
+    HAL_ADC_Stop(hadc1);
 
-    float ActiveR = ((3.3 * KnownR) / (measured_volts)) - KnownR;
+    HAL_Delay(10); // 10ms delay between samples
+  }
 
-    int r1000 = ActiveR * 1000;
-    int v1000 = measured_volts * 1000;
-    sprintf(msg, ">R:%d\r\n>V:%d.%03d\r\n", r1000 / 1000, v1000 / 1000,
-            v1000 % 1000);
-    HAL_UART_Transmit(&huart2, (uint8_t *)msg, strlen(msg), HAL_MAX_DELAY);
+  sConfig.Channel = ADC_CHANNEL_9; // PA4 (v_ref) is IN9
+  HAL_ADC_ConfigChannel(hadc1, &sConfig);
+  for (int i = 0; i < samples; i++) {
 
-    HAL_Delay(100);
-  */
+    HAL_ADC_Start(hadc1);
+    HAL_ADC_PollForConversion(hadc1, HAL_MAX_DELAY);
+    sum_ref += HAL_ADC_GetValue(hadc1);
+    HAL_ADC_Stop(hadc1);
 
-  HAL_ADC_Start(hadc);
-  HAL_ADC_PollForConversion(hadc, HAL_MAX_DELAY);
-  uint16_t raw = HAL_ADC_GetValue(hadc);
-  float measured_volts = 3.3f * (raw / 4095.0f);
-  float ActiveR = ((3.3 * 980) / (measured_volts)) - 980;
+    HAL_Delay(10); // 10ms delay between samples
+  }
 
-  return (uint16_t)ActiveR;
+  uint16_t v_adc_RAW = sum_adc / samples;
+  uint16_t v_ref_RAW = sum_ref / samples;
+
+  // ADC values are from 0-4095 corresponding with 0-3.3V/v_ref
+  float V_adc = v_adc_RAW / 4095.0f;
+  float V_ref = v_ref_RAW / 4095.0f;
+
+  // 1kOhm, but I measured it to be 986 Ohms with a multimeter
+  float R_known = 986;
+
+  // check if we have any bad readings
+  if (V_ref <= 0.0f || V_adc <= 0.0f || V_adc >= V_ref) {
+    return 0;
+  }
+
+  // Voltage divider
+  // (3.3V) -> R_unknown -> (V_adc) -> R_known -> GND
+  //  V_adc = 3.3V * (R_known / (R_known + R_unknown))
+  // Solving for R_unknown gives us:
+  float R_unknown = R_known * ((V_ref - V_adc) / V_adc);
+
+  // Convert from float to uint16_t
+  return (uint16_t)R_unknown;
 }
 
 bool h_IsPressedSW2() {
