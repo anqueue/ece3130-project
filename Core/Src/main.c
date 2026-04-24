@@ -102,7 +102,6 @@ int main(void) {
   MX_USART2_UART_Init();
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
-  srand(HAL_GetTick());
   LCD_Init();
   h_SetCursor(0); // turn of cursor
 

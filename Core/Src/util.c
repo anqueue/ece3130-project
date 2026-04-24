@@ -103,7 +103,7 @@ uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
     HAL_Delay(10); // 10ms delay between samples
   }
 
-  sConfig.Channel = ADC_CHANNEL_9; // PA4 (v_ref) is IN9
+  sConfig.Channel = ADC_CHANNEL_9; // PA2 (v_ref) is IN9
   HAL_ADC_ConfigChannel(hadc1, &sConfig);
   for (int i = 0; i < samples; i++) {
 
