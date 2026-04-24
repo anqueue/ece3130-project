@@ -8,7 +8,8 @@
 uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
 uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
 
-uint16_t RESISTORS = {};
+uint16_t RESISTORS[5] = {100, 220, 470, 1000, 2200};
+char *RESISTOR_STRINGS[5] = {"100 Ω", "220 Ω", "470 Ω", "1 kΩ", "2.2 kΩ"};
 
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
@@ -148,6 +149,40 @@ void LCD_Init() {
   Write_Instr_LCD(0x0E);
   Write_Instr_LCD(0x01);
   Write_Instr_LCD(0x06);
+
+  // Load the custom omega symbol into the LCDs CGRAM
+  h_LoadOhmSymbol();
+}
+
+void h_LoadOhmSymbol(void) {
+  // Run Set CGRAM Address command
+  Write_Instr_LCD(0b01000000);
+
+  // 5x8 bitmap
+  // I think this looks pretty good for a 5x8 screen
+  uint8_t ohm_pattern[8] = {
+      0b00000, // ____
+      0b01110, //  XXX
+      0b10001, // X   X
+      0b10001, // X   X
+      0b10001, // X   X bottom arc
+      0b01010, //  X X  legs
+      0b11011, // XX XX feet
+      0b00000, // _____
+  };
+
+  // write row by row to the lcd
+  for (int i = 0; i < 8; i++) {
+    Write_Char_LCD(ohm_pattern[i]);
+  }
+
+  // Run Set DDRAM address/get back to normal mode
+  Write_Instr_LCD(0b10000000);
+}
+
+void h_WriteOhmSymbol(void) {
+  // Write custom character 0 (the Ohm symbol) to current cursor position
+  Write_Char_LCD(0);
 }
 
 void LCD_nibble_write(uint8_t temp, uint8_t s) {

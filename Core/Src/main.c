@@ -121,9 +121,10 @@ int main(void) {
   while (1) {
     uint16_t resistance = h_GetResistance(&hadc1);
     char buffer[16];
-    snprintf(buffer, sizeof(buffer), "%u Ohms", resistance);
+    snprintf(buffer, sizeof(buffer), "%u ", resistance);
     h_ClearLCD();
     Write_String_LCD(buffer);
+    h_WriteOhmSymbol();
     HAL_Delay(1000); // Update every second
   }
   /* USER CODE END WHILE */

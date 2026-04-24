@@ -15,6 +15,8 @@ enum GameState {
 
 extern volatile enum GameState GAME_STATE;
 extern volatile uint8_t POINTS;
+extern char* RESISTOR_STRINGS[5];
+extern uint16_t RESISTORS[5];
 
 void test();
 
@@ -46,4 +48,10 @@ void Write_SR_LCD(uint8_t);
 void LCD_Init(void);
 void Write_SR_7S(uint8_t temp_Enable, uint8_t temp_Digit);
 void Write_7Seg(uint8_t temp_Enable, uint8_t temp_Digit);
+
+// Load custom Ohm symbol into CGRAM at position 0
+void h_LoadOhmSymbol(void);
+
+// Write custom Ohm symbol to LCD
+void h_WriteOhmSymbol(void);
 #endif
