@@ -135,7 +135,7 @@ int main(void) {
     // in the meanatime, lets print the 7s
     h_7S_Scheduled();
   }
-  uint8_t rounds = 0; //set starting rounds to 0
+  uint8_t rounds = 1; //set starting rounds to 1
   next_round:
   h_ClearLCD();
 
