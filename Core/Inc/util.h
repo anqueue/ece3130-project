@@ -33,6 +33,8 @@ void test();
 // Game functions
 void g_PrintWelcome();
 void g_GetReady();
+void g_ResistorFound();
+void g_ResistorNotFound();
 
 void user_SysTick_Handler();
 

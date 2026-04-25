@@ -149,21 +149,36 @@ int main(void) {
 
   Write_String_LCD(line1_buffer);
   h_WriteOhmSymbol();
-  TIME_LEFT_MS = 10000; // 10s to find the resistor
-  GAME_STATE = GAME_RUNNING;
-
+  h_ClearLCD();
   h_HomeCursor();
   h_SetLine(1);
-  while (1) {
+  uint16_t resistance;
+  while (GAME_STATE == GAME_RUNNING) {
+    h_7S_Scheduled(); // ! 10 SECOND COUNTDOWN
     h_HomeCursor();
     h_SetLine(1);
-    uint16_t resistance = h_GetResistance(&hadc1);
+    resistance = h_GetResistance(&hadc1);
     char buffer[16];
     snprintf(buffer, sizeof(buffer), "%u ", resistance);
     Write_String_LCD(buffer);
     h_WriteOhmSymbol();
-    HAL_Delay(1000); // Update every second
   }
+  // ! after resistor is found or not found
+  float resistorLowTolerance =
+      RESISTORS[target_index] - (RESISTORS[target_index] * 0.10f);
+  float resistorHighTolerance =
+      RESISTORS[target_index] + (RESISTORS[target_index] * 0.10f);
+
+  if (resistorLowTolerance < resistance || resistance < resistorHighTolerance) {
+    g_ResistorFound();
+    HAL_Delay(3000);
+    GAME_STATE = GAME_GET_READY;
+  } else {
+    g_ResistorNotFound();
+    HAL_Delay(3000);
+    GAME_STATE = GAME_WELCOME;
+  }
+  // !
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */

@@ -8,8 +8,8 @@
 uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
 uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
 
-uint16_t RESISTORS[5] = {100, 220, 470, 1000, 2200};
-char *RESISTOR_STRINGS[5] = {"100", "220", "470", "1k", "2.2k"};
+uint16_t RESISTORS[5] = {586, 1057, 489, 224, 99};
+char *RESISTOR_STRINGS[5] = {"560", "1k", "470", "220", "100"};
 
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
@@ -46,6 +46,30 @@ void g_GetReady() {
   Write_String_LCD(GET_READY_l1);
   h_SetLine(1);
   Write_String_LCD(GET_READY_l2);
+  h_SetLine(0);
+}
+
+void g_ResistorFound() {
+  char *FOUND_l1 = " Good Job!";
+  char *FOUND_l2 = " You found it! ";
+
+  h_ClearLCD();
+  h_SetLine(0);
+  Write_String_LCD(FOUND_l1);
+  h_SetLine(1);
+  Write_String_LCD(FOUND_l2);
+  h_SetLine(0);
+}
+
+void g_ResistorNotFound() {
+  char *LOST_l1 = " Wrong Resistor!";
+  char *LOST_l2 = " Exiting game.";
+
+  h_ClearLCD();
+  h_SetLine(0);
+  Write_String_LCD(LOST_l1);
+  h_SetLine(1);
+  Write_String_LCD(LOST_l2);
   h_SetLine(0);
 }
 
@@ -193,6 +217,7 @@ void user_SysTick_Handler() {
     } else {
       // Countdown finished, start the game
       GAME_STATE = GAME_RUNNING;
+      TIME_LEFT_MS = 10000;
     }
   } else {
     if (GAME_STATE == GAME_RUNNING) {
@@ -201,7 +226,7 @@ void user_SysTick_Handler() {
         TIME_LEFT_MS--;
       } else {
         // Times up! End the game
-        // GAME_STATE = GAME_OVER;
+        GAME_STATE = GAME_POST_ROUND;
       }
     }
   }
