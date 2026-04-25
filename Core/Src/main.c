@@ -112,119 +112,29 @@ welcome:
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  // Currently we can guarentee that game state is on the welcome page.
-  // We want to wait until any key is pressed to start the game
+  while (1)
+  {
+    int KnownR = 980; // 1kOhm
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 
-  TIME_LEFT_MS = DEV_MODE ? 1000 : 5000;
+    HAL_ADC_Start(&hadc1);
+    HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
+    raw = HAL_ADC_GetValue(&hadc1);
+ 
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+    float measured_volts = 3.3f*(raw / 4095.0f);
 
-  // SW2_pressed gets modifed from the EXTI interrupt when the button is pressed.
-  // We set it to false here and just wait until its pressed, then immediately set it back to false so we can use it for the rest of the game
-  SW2_pressed = false;
-  while (!SW2_pressed) {
-    // Wait for the initial Press SW2 to start
-    h_7S_Scheduled();
-  }
-  SW2_pressed = false;
+    float ActiveR = ((3.3 * KnownR)/(measured_volts))-KnownR;
+    
+    int r1000 = ActiveR * 1000;
+    int v1000 = measured_volts * 1000;
+    sprintf(msg, ">R:%d\r\n>V:%d.%03d\r\n", r1000 / 1000, v1000 / 1000, v1000 % 1000);
+    HAL_UART_Transmit(&huart2, (uint8_t*)msg, strlen(msg), HAL_MAX_DELAY);
 
-  // We base the seed off of the current tick, which is a little random
-  uint32_t seed = HAL_GetTick();
-  // but then we XOR it with whatever we read from the ADC, which has random
-  // noise
-  seed ^= h_GetRandomishValue(&hadc1);
-  srand(seed);
+    HAL_Delay(100);
+    /* USER CODE END WHILE */
 
-  uint8_t rounds = 1; // set starting rounds to 1
-
-next_round:
-  TIME_LEFT_MS = DEV_MODE ? 1000 : 5000; // get ready is 1s in dev, 5s otherwise
-
-  // Get ready, Start the 5s countdown
-  // The systick handler will check state and decrement for us, then transition
-  // the state to GAME_RUNNING
-
-  g_GetReady(); // print the get ready screen
-  GAME_STATE = GAME_GET_READY;
-  while (GAME_STATE == GAME_GET_READY) {
-    // Print the countdown on the 7 segment
-    h_7S_Scheduled();
-  }
-
-  // Freeze the countdown while we prepare the new round display.
-  GAME_STATE = GAME_POST_ROUND;
-
-  h_ClearLCD();
-
-  // Set time to 10s in case it didnt get handled in SysTick
-  TIME_LEFT_MS = 10000;
-
-  // Pick a random resistor
-  // If we add more resistors, this would need to be modified
-  size_t target_index = rand() % 5; // Random index from 0 to 4
-
-  // Two buffers to store the lines we print to lcd
-  char line1_buffer[16];
-  char line2_buffer[16];
-
-  h_SetLine(0);
-
-  // We use stdio to help format the string with the resistor value
-  snprintf(line1_buffer, sizeof(line1_buffer), "Find: %s",
-           RESISTOR_STRINGS[target_index]);
-
-  Write_String_LCD(line1_buffer);
-
-  // The ohm symbol is defined as a custom character during LCD init
-
-  h_WriteOhmSymbol();
-  h_SetLine(1);
-
-  snprintf(line2_buffer, sizeof(line2_buffer), "Round %u/5", rounds);
-  Write_String_LCD(line2_buffer);
-
-  // Start the game!
-  GAME_STATE = GAME_RUNNING;
-  // h_ClearLCD();
-  // h_HomeCursor();
-  // h_SetLine(1);
-
-  uint16_t resistance = 0;
-
-  // We store the current HAL tick here so we know how often to sample ADC
-  // since it takes a decent bit of time, and doing it every loop iteration
-  // would reuslt in LCD flickering
-  uint32_t lastSample = HAL_GetTick();
-
-  // +/- 10% tolerance with the resistors, seems to work correctly
-  float resistorLowTolerance =
-      RESISTORS[target_index] - (RESISTORS[target_index] * 0.10f);
-  float resistorHighTolerance =
-      RESISTORS[target_index] + (RESISTORS[target_index] * 0.10f);
-
-  while (GAME_STATE == GAME_RUNNING) {
-    // Go through and print all of the 7 segment values with the global time remaning
-    h_7S_Scheduled();
-    // h_HomeCursor();
-    // h_SetLine(1);
-
-    // only sample ADC every 500ms so we dont spend too much time not updating the 7seg
-    if (HAL_GetTick() - lastSample > 500) {
-      lastSample = HAL_GetTick();
-      resistance = h_GetResistance(&hadc1);
-    }
-
-    // We wanted to display the currnet measured resistance during use but that ended up
-    // causing too much time between each loop, resulting in 7seg flickering
-
-    // char buffer[16];
-    // snprintf(buffer, sizeof(buffer), "%u ", resistance);
-    // Write_String_LCD(buffer);
-    // h_WriteOhmSymbol();
-
-    // Check if our resistor is correct
-    if (resistorLowTolerance < resistance &&
-        resistance < resistorHighTolerance) {
-      break;
-    }
+    /* USER CODE BEGIN 3 */
   }
 
   // SysTick will get us out of the previous while loop after 10 seconds, or when we manually break
