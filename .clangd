@@ -3,6 +3,8 @@ CompileFlags:
     - '-ferror-limit=0'
     - '-Wno-implicit-int'
   CompilationDatabase: build/Debug
+Format:
+  Style: '{BasedOnStyle: LLVM, PointerAlignment: Left}'
 Diagnostics:
   Suppress:
     - unused-includes
