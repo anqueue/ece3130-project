@@ -14,7 +14,7 @@ char *RESISTOR_STRINGS[5] = {"560", "1k", "470", "220", "100"};
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
 volatile uint16_t TIME_LEFT_MS = 0;
-bool DEV_MODE = true;
+bool DEV_MODE = false;
 
 void test() {
   for (int i = 0; i < 440; i++) {
@@ -44,7 +44,7 @@ void g_PrintWelcome() {
 }
 
 void g_GetReady() {
-  char *GET_READY_l1 = "   Get Ready!   ";
+  char *GET_READY_l1 = "  Get Ready...  ";
   char *GET_READY_l2 = "                ";
 
   h_ClearLCD();
@@ -56,7 +56,7 @@ void g_GetReady() {
 }
 
 void g_ResistorFound() {
-  char *FOUND_l1 = " Good Job!";
+  char *FOUND_l1 = "   Good Job!   ";
   char *FOUND_l2 = " You found it! ";
 
   h_ClearLCD();
@@ -80,8 +80,8 @@ void g_ResistorNotFound() {
 }
 
 void g_CompleteFiveRounds() {
-  char *FIVE_l1 = " 5 rounds complete!";
-  char *FIVE_l2 = " Exiting to menu.";
+  char *FIVE_l1 = " 5 rounds done! ";
+  char *FIVE_l2 = "    Goodbye!    ";
 
   h_ClearLCD();
   h_SetLine(0);
@@ -94,11 +94,10 @@ void g_CompleteFiveRounds() {
 void h_ClearLCD() { Write_Instr_LCD(0x01); }
 
 void h_SetLine(uint8_t line) {
-  if (LCD_CURRENT_LINE == line) {
-    LCD_CURRENT_LINE = 1;
+  LCD_CURRENT_LINE = line;
+  if (line == 0) {
     Write_Instr_LCD(0x80);
   } else {
-    LCD_CURRENT_LINE = 0;
     Write_Instr_LCD(0xC0);
   }
 }
@@ -233,9 +232,8 @@ void user_SysTick_Handler() {
     if (TIME_LEFT_MS > 0) {
       TIME_LEFT_MS--;
     } else {
-      // Countdown finished, start the game
-      GAME_STATE = GAME_RUNNING;
-      TIME_LEFT_MS = 10000;
+      // get ready time is up
+      GAME_STATE = GAME_POST_ROUND;
     }
   } else {
     if (GAME_STATE == GAME_RUNNING) {

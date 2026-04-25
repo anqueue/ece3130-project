@@ -105,6 +105,7 @@ int main(void) {
   LCD_Init();
   h_SetCursor(0); // turn of cursor
 welcome:
+  GAME_STATE = GAME_WELCOME;
   g_PrintWelcome();
   /* USER CODE END 2 */
 
@@ -125,35 +126,48 @@ welcome:
   seed ^= h_GetRandomishValue(&hadc1);
   srand(seed);
 
+  uint8_t rounds = 1; // set starting rounds to 1
+next_round:
+  TIME_LEFT_MS = DEV_MODE ? 1000 : 5000; // get ready is 1s in dev, 5s otherwise
+
   // Get ready, Start the 5s countdown
   // The systick handler will check state and decrement for us, then transition
   // the state to GAME_RUNNING
-  g_GetReady(); // Print the Get Ready screen
+  g_GetReady(); // print the get ready screen
   GAME_STATE = GAME_GET_READY;
   while (GAME_STATE == GAME_GET_READY) {
-    // Wait for countdown to finish- systick will change state for us
-    // in the meanatime, lets print the 7s
+    // Print the countdown on the 7 segment
     h_7S_Scheduled();
   }
-  uint8_t rounds = 1; // set starting rounds to 1
-next_round:
+
+  // Freeze the countdown while we prepare the new round display.
+  GAME_STATE = GAME_POST_ROUND;
+
   h_ClearLCD();
+
+  // Set time to 10s in case it didnt get handled in SysTick
+  TIME_LEFT_MS = 10000;
 
   // Pick a random resistor
   size_t target_index = rand() % 5; // Random index from 0 to 4
 
   char line1_buffer[16];
+  char line2_buffer[16];
   h_SetLine(0);
   snprintf(line1_buffer, sizeof(line1_buffer), "Find: %s",
            RESISTOR_STRINGS[target_index]);
 
   Write_String_LCD(line1_buffer);
   h_WriteOhmSymbol();
+  h_SetLine(1);
+  snprintf(line2_buffer, sizeof(line2_buffer), "Round %u/5", rounds);
+  Write_String_LCD(line2_buffer);
+  GAME_STATE = GAME_RUNNING;
   // h_ClearLCD();
   // h_HomeCursor();
   // h_SetLine(1);
-  uint16_t resistance;
-  uint16_t lastSample = HAL_GetTick();
+  uint16_t resistance = 0;
+  uint32_t lastSample = HAL_GetTick();
   float resistorLowTolerance =
       RESISTORS[target_index] - (RESISTORS[target_index] * 0.10f);
   float resistorHighTolerance =
@@ -182,6 +196,7 @@ next_round:
   // ! after resistor is found or not found
   uint16_t currTime = TIME_LEFT_MS;
   uint32_t initialTick = HAL_GetTick();
+  GAME_STATE = GAME_POST_ROUND;
   while (1) {
     h_7S_Scheduled_Param(currTime);
     if (HAL_GetTick() > (initialTick + 2000)) {
@@ -192,7 +207,6 @@ next_round:
   if (resistorLowTolerance < resistance && resistance < resistorHighTolerance) {
     g_ResistorFound();
     HAL_Delay(3000);
-    GAME_STATE = GAME_GET_READY;
     rounds++;
     if (rounds > 5) {
       g_CompleteFiveRounds();
@@ -204,7 +218,6 @@ next_round:
   } else {
     g_ResistorNotFound();
     HAL_Delay(3000);
-    GAME_STATE = GAME_GET_READY;
     rounds++;
     if (rounds > 5) {
       g_CompleteFiveRounds();
