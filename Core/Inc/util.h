@@ -36,6 +36,7 @@ void g_PrintWelcome();
 void g_GetReady();
 void g_ResistorFound();
 void g_ResistorNotFound();
+void g_CompleteFiveRounds();
 
 void user_SysTick_Handler();
 

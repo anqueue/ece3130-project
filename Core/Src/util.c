@@ -69,13 +69,25 @@ void g_ResistorFound() {
 
 void g_ResistorNotFound() {
   char *LOST_l1 = " Wrong Resistor!";
-  char *LOST_l2 = " Exiting game.";
+  char *LOST_l2 = " Next round...";
 
   h_ClearLCD();
   h_SetLine(0);
   Write_String_LCD(LOST_l1);
   h_SetLine(1);
   Write_String_LCD(LOST_l2);
+  h_SetLine(0);
+}
+
+void g_CompleteFiveRounds() {
+  char *FIVE_l1 = " 5 rounds complete!";
+  char *FIVE_l2 = " Exiting to menu.";
+
+  h_ClearLCD();
+  h_SetLine(0);
+  Write_String_LCD(FIVE_l1);
+  h_SetLine(1);
+  Write_String_LCD(FIVE_l2);
   h_SetLine(0);
 }
 

@@ -135,6 +135,7 @@ int main(void) {
     // in the meanatime, lets print the 7s
     h_7S_Scheduled();
   }
+  uint8_t rounds = 0; //set starting rounds to 0
   next_round:
   h_ClearLCD();
 
@@ -192,14 +193,28 @@ int main(void) {
     g_ResistorFound();
     HAL_Delay(3000);
     GAME_STATE = GAME_GET_READY;
-    goto next_round;
+    rounds++;
+    if (rounds > 5){
+      g_CompleteFiveRounds();
+      HAL_Delay(1000);
+      goto welcome;
+    } else {
+      goto next_round;
+    }
   } else {
     g_ResistorNotFound();
     HAL_Delay(3000);
-    GAME_STATE = GAME_WELCOME;
-    goto welcome;
+    GAME_STATE = GAME_GET_READY;
+  rounds++;
+    if (rounds > 5){
+      g_CompleteFiveRounds();
+      HAL_Delay(1000);
+      goto welcome;
+    } else {
+      goto next_round;
+    }
   }
-  // !
+
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
