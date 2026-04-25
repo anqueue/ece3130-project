@@ -104,7 +104,7 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   LCD_Init();
   h_SetCursor(0); // turn of cursor
-
+  welcome:
   g_PrintWelcome();
   /* USER CODE END 2 */
 
@@ -113,12 +113,11 @@ int main(void) {
   // Currently we can guarentee that game state is on the welcome page.
   // We want to wait until any key is pressed to start the game
 
-  TIME_LEFT_MS = 5000;
+  TIME_LEFT_MS = DEV_MODE ? 1000 : 5000;
   while (!h_IsPressedSW2()) {
     // Wait for the initial Press SW2 to start
     h_7S_Scheduled();
   }
-
   // We base the seed off of the current tick, which is a little random
   uint32_t seed = HAL_GetTick();
   // but then we XOR it with whatever we read from the ADC, which has random
@@ -136,7 +135,7 @@ int main(void) {
     // in the meanatime, lets print the 7s
     h_7S_Scheduled();
   }
-
+  next_round:
   h_ClearLCD();
 
   // Pick a random resistor
@@ -149,34 +148,56 @@ int main(void) {
 
   Write_String_LCD(line1_buffer);
   h_WriteOhmSymbol();
-  h_ClearLCD();
-  h_HomeCursor();
-  h_SetLine(1);
+  // h_ClearLCD();
+  // h_HomeCursor();
+  // h_SetLine(1);
   uint16_t resistance;
-  while (GAME_STATE == GAME_RUNNING) {
-    h_7S_Scheduled(); // ! 10 SECOND COUNTDOWN
-    h_HomeCursor();
-    h_SetLine(1);
-    resistance = h_GetResistance(&hadc1);
-    char buffer[16];
-    snprintf(buffer, sizeof(buffer), "%u ", resistance);
-    Write_String_LCD(buffer);
-    h_WriteOhmSymbol();
-  }
-  // ! after resistor is found or not found
+  uint16_t lastSample = HAL_GetTick();
   float resistorLowTolerance =
       RESISTORS[target_index] - (RESISTORS[target_index] * 0.10f);
   float resistorHighTolerance =
       RESISTORS[target_index] + (RESISTORS[target_index] * 0.10f);
 
-  if (resistorLowTolerance < resistance || resistance < resistorHighTolerance) {
+  while (GAME_STATE == GAME_RUNNING) {
+    h_7S_Scheduled(); // ! 10 SECOND COUNTDOWN
+    // h_HomeCursor();
+    // h_SetLine(1);
+
+    // only sample ADC every 500ms so we dont spend too much time not updating
+    // the 7seg
+    if (HAL_GetTick() - lastSample > 500) {
+      lastSample = HAL_GetTick();
+      resistance = h_GetResistance(&hadc1);
+    }
+    // char buffer[16];
+    // snprintf(buffer, sizeof(buffer), "%u ", resistance);
+    // Write_String_LCD(buffer);
+    // h_WriteOhmSymbol();
+    if (resistorLowTolerance < resistance &&
+        resistance < resistorHighTolerance) {
+      break;
+    }
+  }
+  // ! after resistor is found or not found
+  uint16_t currTime = TIME_LEFT_MS;
+  uint32_t initialTick = HAL_GetTick();
+  while (1){
+     h_7S_Scheduled_Param(currTime);
+    if (HAL_GetTick() > (initialTick + 2000)){
+      break;
+    }
+  }
+
+  if (resistorLowTolerance < resistance && resistance < resistorHighTolerance) {
     g_ResistorFound();
     HAL_Delay(3000);
     GAME_STATE = GAME_GET_READY;
+    goto next_round;
   } else {
     g_ResistorNotFound();
     HAL_Delay(3000);
     GAME_STATE = GAME_WELCOME;
+    goto welcome;
   }
   // !
   /* USER CODE END WHILE */

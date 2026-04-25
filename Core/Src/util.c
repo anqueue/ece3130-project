@@ -14,6 +14,7 @@ char *RESISTOR_STRINGS[5] = {"560", "1k", "470", "220", "100"};
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
 volatile uint16_t TIME_LEFT_MS = 0;
+bool DEV_MODE = true;
 
 void test() {
   for (int i = 0; i < 440; i++) {
@@ -28,12 +29,17 @@ void test() {
 void g_PrintWelcome() {
   char *WELCOME_l1 = " Resistor Game";
   char *WELCOME_l2 = " Press to start ";
+  char *WELCOME_l2DEV = "DEV MODE ON";
 
   h_ClearLCD();
   h_SetLine(0);
   Write_String_LCD(WELCOME_l1);
   h_SetLine(1);
-  Write_String_LCD(WELCOME_l2);
+  if (DEV_MODE) {
+    Write_String_LCD(WELCOME_l2DEV);
+  } else {
+    Write_String_LCD(WELCOME_l2);
+  }
   h_SetLine(0);
 }
 
@@ -98,7 +104,7 @@ void h_SetCursor(uint8_t new) {
 }
 
 uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
-  int samples = 10;
+  int samples = 5;
   uint32_t sum_adc = 0;
   uint32_t sum_ref = 0;
   ADC_ChannelConfTypeDef sConfig = {0}; // empty config struct
@@ -124,7 +130,7 @@ uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
     sum_adc += HAL_ADC_GetValue(hadc1);
     HAL_ADC_Stop(hadc1);
 
-    HAL_Delay(10); // 10ms delay between samples
+    HAL_Delay(2); // 10ms delay between samples
   }
 
   sConfig.Channel = ADC_CHANNEL_9; // PA2 (v_ref) is IN9
@@ -136,7 +142,7 @@ uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
     sum_ref += HAL_ADC_GetValue(hadc1);
     HAL_ADC_Stop(hadc1);
 
-    HAL_Delay(10); // 10ms delay between samples
+    HAL_Delay(2); // 10ms delay between samples
   }
 
   uint16_t v_adc_RAW = sum_adc / samples;
@@ -305,6 +311,20 @@ void h_7S_Scheduled() {
   // https://www.geeksforgeeks.org/cpp/static-keyword-cpp/
   static uint8_t currentDigit = 0;
   h_Time7SegmentDigit(TIME_LEFT_MS, currentDigit);
+  currentDigit++;
+  if (currentDigit > 4) {
+    currentDigit = 1;
+  }
+}
+
+void h_7S_Scheduled_Param(uint16_t time) {
+  // Prints only ONE 7S digit, helps with scheduling the 7S and LCD and game
+  // logic without blocking
+
+  // we use a static variable to keep track
+  // https://www.geeksforgeeks.org/cpp/static-keyword-cpp/
+  static uint8_t currentDigit = 0;
+  h_Time7SegmentDigit(time, currentDigit);
   currentDigit++;
   if (currentDigit > 4) {
     currentDigit = 1;

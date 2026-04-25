@@ -27,6 +27,7 @@ extern volatile uint8_t POINTS;
 extern volatile uint16_t TIME_LEFT_MS;
 extern char* RESISTOR_STRINGS[5];
 extern uint16_t RESISTORS[5];
+extern bool DEV_MODE;
 
 void test();
 
@@ -47,7 +48,9 @@ void h_ClearLCD();
 void h_HomeCursor();
 
 void h_7S_Scheduled();
+void h_7S_Scheduled_Param(uint16_t time);
 void h_Time7SegmentDigit(uint16_t time, uint8_t digit);
+
 
 // Set the LCD line to 0 or 1
 void h_SetLine(uint8_t);
