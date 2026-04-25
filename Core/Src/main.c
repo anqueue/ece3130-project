@@ -102,10 +102,12 @@ int main(void) {
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
   LCD_Init();
-  h_SetCursor(0); // turn of cursor
+  h_SetCursor(0); // turn off cursor for a cleaner look
+
 welcome:
+    // Set the game state to welcome so the interrupt knows where we are
   GAME_STATE = GAME_WELCOME;
-  g_PrintWelcome();
+  g_PrintWelcome(); // Print the welcome screen text
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -114,12 +116,16 @@ welcome:
   // We want to wait until any key is pressed to start the game
 
   TIME_LEFT_MS = DEV_MODE ? 1000 : 5000;
+
+  // SW2_pressed gets modifed from the EXTI interrupt when the button is pressed.
+  // We set it to false here and just wait until its pressed, then immediately set it back to false so we can use it for the rest of the game
   SW2_pressed = false;
   while (!SW2_pressed) {
     // Wait for the initial Press SW2 to start
     h_7S_Scheduled();
   }
   SW2_pressed = false;
+
   // We base the seed off of the current tick, which is a little random
   uint32_t seed = HAL_GetTick();
   // but then we XOR it with whatever we read from the ADC, which has random
@@ -128,12 +134,14 @@ welcome:
   srand(seed);
 
   uint8_t rounds = 1; // set starting rounds to 1
+
 next_round:
   TIME_LEFT_MS = DEV_MODE ? 1000 : 5000; // get ready is 1s in dev, 5s otherwise
 
   // Get ready, Start the 5s countdown
   // The systick handler will check state and decrement for us, then transition
   // the state to GAME_RUNNING
+
   g_GetReady(); // print the get ready screen
   GAME_STATE = GAME_GET_READY;
   while (GAME_STATE == GAME_GET_READY) {
@@ -150,51 +158,79 @@ next_round:
   TIME_LEFT_MS = 10000;
 
   // Pick a random resistor
+  // If we add more resistors, this would need to be modified
   size_t target_index = rand() % 5; // Random index from 0 to 4
 
+  // Two buffers to store the lines we print to lcd
   char line1_buffer[16];
   char line2_buffer[16];
+
   h_SetLine(0);
+
+  // We use stdio to help format the string with the resistor value
   snprintf(line1_buffer, sizeof(line1_buffer), "Find: %s",
            RESISTOR_STRINGS[target_index]);
 
   Write_String_LCD(line1_buffer);
+
+  // The ohm symbol is defined as a custom character during LCD init
+
   h_WriteOhmSymbol();
   h_SetLine(1);
+
   snprintf(line2_buffer, sizeof(line2_buffer), "Round %u/5", rounds);
   Write_String_LCD(line2_buffer);
+
+  // Start the game!
   GAME_STATE = GAME_RUNNING;
   // h_ClearLCD();
   // h_HomeCursor();
   // h_SetLine(1);
+
   uint16_t resistance = 0;
+
+  // We store the current HAL tick here so we know how often to sample ADC
+  // since it takes a decent bit of time, and doing it every loop iteration
+  // would reuslt in LCD flickering
   uint32_t lastSample = HAL_GetTick();
+
+  // +/- 10% tolerance with the resistors, seems to work correctly
   float resistorLowTolerance =
       RESISTORS[target_index] - (RESISTORS[target_index] * 0.10f);
   float resistorHighTolerance =
       RESISTORS[target_index] + (RESISTORS[target_index] * 0.10f);
 
   while (GAME_STATE == GAME_RUNNING) {
-    h_7S_Scheduled(); // ! 10 SECOND COUNTDOWN
+    // Go through and print all of the 7 segment values with the global time remaning
+    h_7S_Scheduled();
     // h_HomeCursor();
     // h_SetLine(1);
 
-    // only sample ADC every 500ms so we dont spend too much time not updating
-    // the 7seg
+    // only sample ADC every 500ms so we dont spend too much time not updating the 7seg
     if (HAL_GetTick() - lastSample > 500) {
       lastSample = HAL_GetTick();
       resistance = h_GetResistance(&hadc1);
     }
+
+    // We wanted to display the currnet measured resistance during use but that ended up
+    // causing too much time between each loop, resulting in 7seg flickering
+
     // char buffer[16];
     // snprintf(buffer, sizeof(buffer), "%u ", resistance);
     // Write_String_LCD(buffer);
     // h_WriteOhmSymbol();
+
+    // Check if our resistor is correct
     if (resistorLowTolerance < resistance &&
         resistance < resistorHighTolerance) {
       break;
     }
   }
-  // ! after resistor is found or not found
+
+  // SysTick will get us out of the previous while loop after 10 seconds, or when we manually break
+
+  // Store the current time so we can keep displaying it on the 7seg so users can keep track of their PB
+  // We also store the current tick so we can use it and break after 2000ms
   uint16_t currTime = TIME_LEFT_MS;
   uint32_t initialTick = HAL_GetTick();
   GAME_STATE = GAME_POST_ROUND;
@@ -205,18 +241,31 @@ next_round:
     }
   }
 
+  // Can be a redudant check if they already slotted in the correct resistor, but its neglibible
+  // Check if the resistor found is correct or ont
   if (resistorLowTolerance < resistance && resistance < resistorHighTolerance) {
+      // Print the resistor found screen
     g_ResistorFound();
+
+    // Wait a few seconds then move on to the next round
     HAL_Delay(3000);
     rounds++;
     if (rounds > 5) {
+        // If they played all 5 rounds, then thats all of the game
+        // We jump to welcome instead of next round so someone else can play it
       g_CompleteFiveRounds();
       HAL_Delay(1000);
+
+      // Using goto lets us keep all the game logic in one place without having to reinitialize
+      // and reset a bunch of variables. For a larger project this would be a bad practice but this game
+      // is pretty linear
       goto welcome;
     } else {
+        // Go back to next round for another round
       goto next_round;
     }
   } else {
+      // Similarly, show resistor not found screen
     g_ResistorNotFound();
     HAL_Delay(3000);
     rounds++;

@@ -8,13 +8,18 @@
 uint8_t LCD_CURRENT_LINE = 0;      // 0 is top line, 1 is bottom line
 uint8_t LCD_CURSOR_VISIBILITY = 0; // 0 is off, 1 is on
 
+// RESISTORS are values measured from multimeter to get the most precise values for the game
 uint16_t RESISTORS[5] = {586, 1057, 489, 224, 99};
 char *RESISTOR_STRINGS[5] = {"560", "1k", "470", "220", "100"};
 
+// We update these global variables all over, so we must
+// specify that they are volatile so the compilter doesnt optimize them
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
 volatile uint16_t TIME_LEFT_MS = 0;
 volatile bool SW2_pressed = false;
+
+// For testing
 bool DEV_MODE = false;
 
 void test() {
@@ -27,6 +32,7 @@ void test() {
   }
 }
 
+// GAME FUNCTIONS
 void g_PrintWelcome() {
   char *WELCOME_l1 = " Resistor Game";
   char *WELCOME_l2 = " Press to start ";
@@ -92,6 +98,7 @@ void g_CompleteFiveRounds() {
   h_SetLine(0);
 }
 
+// HELPER FUNCTIONS
 void h_ClearLCD() { Write_Instr_LCD(0x01); }
 
 void h_SetLine(uint8_t line) {
@@ -115,11 +122,12 @@ void h_SetCursor(uint8_t new) {
   }
 }
 
+// Uses ADC to measure the voltages and calculate the resistance
 uint16_t h_GetResistance(ADC_HandleTypeDef *hadc1) {
   int samples = 5;
   uint32_t sum_adc = 0;
   uint32_t sum_ref = 0;
-  ADC_ChannelConfTypeDef sConfig = {0}; // empty config struct
+  ADC_ChannelConfTypeDef sConfig = {0}; // empty config struct, base settings
 
   // https://controllerstech.com/stm32-adc-5-multiple-channels-without-dma/
   sConfig.Rank =
@@ -357,6 +365,8 @@ void h_7S_Scheduled_Param(uint16_t time) {
     currentDigit = 1;
   }
 }
+
+// Code given from Tarek Elfouly on slides, slightly modified to fit out needs:
 
 void LCD_nibble_write(uint8_t temp, uint8_t s) {
   if (s == 0) {

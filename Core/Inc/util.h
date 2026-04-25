@@ -13,6 +13,7 @@
     -> after the 3s is up, we display the target resistor and switch to the Running state
     Running State: the user must find the resistor within time limit, we constantly check the measured resistance
     and if its within a margin, we go to postround, otherwise, they lose and go back to the welcome screen
+    Post Round State: after a round and before we switch back to another round
 
 */
 enum GameState {
@@ -22,6 +23,7 @@ enum GameState {
     GAME_POST_ROUND
 };
 
+// Global variable declarations
 extern volatile enum GameState GAME_STATE;
 extern volatile uint8_t POINTS;
 extern volatile uint16_t TIME_LEFT_MS;
