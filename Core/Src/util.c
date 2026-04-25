@@ -14,6 +14,7 @@ char *RESISTOR_STRINGS[5] = {"560", "1k", "470", "220", "100"};
 volatile enum GameState GAME_STATE = GAME_WELCOME;
 volatile uint8_t POINTS = 0;
 volatile uint16_t TIME_LEFT_MS = 0;
+volatile bool SW2_pressed = false;
 bool DEV_MODE = false;
 
 void test() {
@@ -246,6 +247,22 @@ void user_SysTick_Handler() {
       }
     }
   }
+}
+
+// The IRQ handler for SW2 (pin PB11) corresponds to EXTI15_10
+void user_EXTI15_10_IRQHandler() {
+  // clear the interrupt flag
+  EXTI->PR1 = EXTI_PR1_PIF11;
+
+  // set a flag so we can check in the main loop
+  // to progress from the welcome screen
+  SW2_pressed = true;
+
+  // add 1 second to the timer (max of 10s because screen only has 4 digits)
+  TIME_LEFT_MS += 1000;
+  if (TIME_LEFT_MS > 10000) {
+    TIME_LEFT_MS = 10000;
+  };
 }
 
 void h_Time7Segment(uint16_t time) {

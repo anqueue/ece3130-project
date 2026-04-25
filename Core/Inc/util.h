@@ -25,6 +25,7 @@ enum GameState {
 extern volatile enum GameState GAME_STATE;
 extern volatile uint8_t POINTS;
 extern volatile uint16_t TIME_LEFT_MS;
+extern volatile bool SW2_pressed;
 extern char* RESISTOR_STRINGS[5];
 extern uint16_t RESISTORS[5];
 extern bool DEV_MODE;
@@ -39,6 +40,7 @@ void g_ResistorNotFound();
 void g_CompleteFiveRounds();
 
 void user_SysTick_Handler();
+void user_EXTI15_10_IRQHandler();
 
 // Helper functions
 

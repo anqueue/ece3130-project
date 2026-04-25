@@ -50,7 +50,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
-ADC_HandleTypeDef hadc2;
 
 UART_HandleTypeDef huart2;
 
@@ -115,10 +114,12 @@ welcome:
   // We want to wait until any key is pressed to start the game
 
   TIME_LEFT_MS = DEV_MODE ? 1000 : 5000;
-  while (!h_IsPressedSW2()) {
+  SW2_pressed = false;
+  while (!SW2_pressed) {
     // Wait for the initial Press SW2 to start
     h_7S_Scheduled();
   }
+  SW2_pressed = false;
   // We base the seed off of the current tick, which is a little random
   uint32_t seed = HAL_GetTick();
   // but then we XOR it with whatever we read from the ADC, which has random
@@ -413,9 +414,15 @@ static void MX_GPIO_Init(void) {
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB10 PB11 */
-  GPIO_InitStruct.Pin = GPIO_PIN_10 | GPIO_PIN_11;
+  /*Configure GPIO pin : PB10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB11 */
+  GPIO_InitStruct.Pin = GPIO_PIN_11;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
@@ -434,6 +441,9 @@ static void MX_GPIO_Init(void) {
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
+
+  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
   /* USER CODE END MX_GPIO_Init_2 */
 }
