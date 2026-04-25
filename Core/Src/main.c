@@ -104,7 +104,7 @@ int main(void) {
   /* USER CODE BEGIN 2 */
   LCD_Init();
   h_SetCursor(0); // turn of cursor
-  welcome:
+welcome:
   g_PrintWelcome();
   /* USER CODE END 2 */
 
@@ -135,8 +135,8 @@ int main(void) {
     // in the meanatime, lets print the 7s
     h_7S_Scheduled();
   }
-  uint8_t rounds = 1; //set starting rounds to 1
-  next_round:
+  uint8_t rounds = 1; // set starting rounds to 1
+next_round:
   h_ClearLCD();
 
   // Pick a random resistor
@@ -182,9 +182,9 @@ int main(void) {
   // ! after resistor is found or not found
   uint16_t currTime = TIME_LEFT_MS;
   uint32_t initialTick = HAL_GetTick();
-  while (1){
-     h_7S_Scheduled_Param(currTime);
-    if (HAL_GetTick() > (initialTick + 2000)){
+  while (1) {
+    h_7S_Scheduled_Param(currTime);
+    if (HAL_GetTick() > (initialTick + 2000)) {
       break;
     }
   }
@@ -194,7 +194,7 @@ int main(void) {
     HAL_Delay(3000);
     GAME_STATE = GAME_GET_READY;
     rounds++;
-    if (rounds > 5){
+    if (rounds > 5) {
       g_CompleteFiveRounds();
       HAL_Delay(1000);
       goto welcome;
@@ -205,8 +205,8 @@ int main(void) {
     g_ResistorNotFound();
     HAL_Delay(3000);
     GAME_STATE = GAME_GET_READY;
-  rounds++;
-    if (rounds > 5){
+    rounds++;
+    if (rounds > 5) {
       g_CompleteFiveRounds();
       HAL_Delay(1000);
       goto welcome;
